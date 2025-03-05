@@ -1,0 +1,449 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+}
+
+:root {
+  --primary: #00a6a6;
+  --primary-dark: #007f80;
+  --secondary: #bbdef0;
+  --accent: #00838f;
+  --background: #f0f7f7;
+  --text: #2d3748;
+  --text-light: #718096;
+  --success: #00897b;
+  --danger: #ef5350;
+  --white: #ffffff;
+  --border: #e2e8f0;
+
+  /* Category Colors */
+  --food: #ff7043;
+  --transportation: #5c6bc0;
+  --entertainment: #7cb342;
+  --utilities: #ffa726;
+  --other: #78909c;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  background: linear-gradient(135deg, var(--background) 0%, #ffffff 100%);
+  color: var(--text);
+}
+
+.app {
+  min-height: 100vh;
+  padding: 3rem 1rem;
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+h1 {
+  text-align: center;
+  color: var(--primary-dark);
+  margin-bottom: 2.5rem;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+h2 {
+  color: var(--text);
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.balance-card {
+  background: var(--white);
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 166, 166, 0.1);
+  margin-bottom: 2rem;
+  text-align: center;
+  transform: translateY(0);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid rgba(0, 166, 166, 0.1);
+}
+
+.balance-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 166, 166, 0.15);
+}
+
+.balance {
+  font-size: 3.5rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 1rem 0;
+  line-height: 1;
+}
+
+.budget-info {
+  color: var(--text-light);
+  font-size: 1.1rem;
+  margin-top: 0.5rem;
+}
+
+.form-container {
+  background: var(--white);
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 166, 166, 0.1);
+  margin-bottom: 2rem;
+  border: 1px solid rgba(0, 166, 166, 0.1);
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 1rem;
+  color: var(--text);
+  transition: all 0.2s ease;
+  background-color: var(--white);
+}
+
+input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 166, 166, 0.15);
+}
+
+button {
+  background-color: var(--primary);
+  color: var(--white);
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+button:hover {
+  background-color: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+.expenses-list {
+  background: var(--white);
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 166, 166, 0.1);
+  border: 1px solid rgba(0, 166, 166, 0.1);
+}
+
+.expenses-list p {
+  text-align: center;
+  color: var(--text-light);
+  font-size: 1.1rem;
+  padding: 2rem 0;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 1rem;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+th, td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  font-weight: 600;
+  color: var(--text);
+  background-color: rgba(0, 166, 166, 0.05);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+th:first-child {
+  border-top-left-radius: 8px;
+}
+
+th:last-child {
+  border-top-right-radius: 8px;
+}
+
+td {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+tr:last-child td:first-child {
+  border-bottom-left-radius: 8px;
+}
+
+tr:last-child td:last-child {
+  border-bottom-right-radius: 8px;
+}
+
+tr:hover td {
+  background-color: rgba(0, 166, 166, 0.02);
+}
+
+/* Initial budget form specific styles */
+.form-container.initial-budget {
+  max-width: 500px;
+  margin: 2rem auto;
+  text-align: center;
+  background: var(--white);
+  backdrop-filter: blur(10px);
+}
+
+.form-container.initial-budget h1 {
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.form-container.initial-budget h2 {
+  color: var(--text-light);
+  font-weight: normal;
+  margin-bottom: 2rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .app {
+    padding: 2rem 0.5rem;
+  }
+
+  .container {
+    padding: 0 1rem;
+  }
+
+  .balance {
+    font-size: 2.5rem;
+  }
+
+  th, td {
+    padding: 0.75rem;
+  }
+}
+
+/* Amount color variations */
+td:last-child {
+  font-family: monospace;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+.balance.positive {
+  color: var(--success);
+  text-shadow: 0 2px 10px rgba(0, 137, 123, 0.1);
+}
+
+.balance.negative {
+  color: var(--danger);
+  text-shadow: 0 2px 10px rgba(239, 83, 80, 0.1);
+}
+
+/* Category Select Styles */
+.category-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 1rem;
+  color: var(--text);
+  background-color: var(--white);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1em;
+}
+
+.category-select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 166, 166, 0.15);
+}
+
+/* Category Tags */
+.category-tag {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.category-tag.food {
+  background-color: rgba(255, 112, 67, 0.1);
+  color: var(--food);
+}
+
+.category-tag.transportation {
+  background-color: rgba(92, 107, 192, 0.1);
+  color: var(--transportation);
+}
+
+.category-tag.entertainment {
+  background-color: rgba(124, 179, 66, 0.1);
+  color: var(--entertainment);
+}
+
+.category-tag.utilities {
+  background-color: rgba(255, 167, 38, 0.1);
+  color: var(--utilities);
+}
+
+.category-tag.other {
+  background-color: rgba(120, 144, 156, 0.1);
+  color: var(--other);
+}
+
+/* Spending Overview */
+.spending-overview {
+  background: var(--white);
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 166, 166, 0.1);
+  margin-bottom: 2rem;
+  border: 1px solid rgba(0, 166, 166, 0.1);
+}
+
+.category-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.category-bar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.category-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.category-label span:last-child {
+  color: var(--text-light);
+  font-family: monospace;
+}
+
+.progress-bar {
+  height: 8px;
+  background-color: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.progress-fill.food {
+  background-color: var(--food);
+}
+
+.progress-fill.transportation {
+  background-color: var(--transportation);
+}
+
+.progress-fill.entertainment {
+  background-color: var(--entertainment);
+}
+
+.progress-fill.utilities {
+  background-color: var(--utilities);
+}
+
+.progress-fill.other {
+  background-color: var(--other);
+}
+
+.percentage {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+/* Animation for progress bars */
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.progress-fill {
+  animation: slideIn 0.6s ease-out;
+}
+
+/* Hover effects for spending overview */
+.category-bar-container:hover .progress-fill {
+  filter: brightness(1.1);
+}
+
+.category-bar-container:hover .category-label {
+  color: var(--primary-dark);
+}
+
+/* Table improvements */
+tr:last-child td {
+  border-bottom: none;
+}
+
+/* Export button */
+.export-button {
+  background-color: var(--white);
+  color: var(--primary);
+  border: 2px solid var(--primary);
+  margin-top: 1rem;
+}
+
+.export-button:hover {
+  background-color: var(--primary);
+  color: var(--white);
+}
+
+
