@@ -1,53 +1,60 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
+import { Pie } from 'react-chartjs-2'
 import './App.css'
 
+ChartJS.register(ArcElement, Tooltip, Legend)
+
 interface Expense {
+  id: string
   date: string
   description: string
   amount: number
-  category: 'food' | 'transportation' | 'entertainment' | 'utilities' | 'other'
+  category: 'food' | 'transportation' | 'entertainment' | 'utilities' | 'housing' | 'healthcare' | 'shopping' | 'education' | 'insurance' | 'other'
+  recurring?: boolean
+  recurringFrequency?: 'daily' | 'weekly' | 'monthly' | 'yearly'
+  nextDueDate?: string
+}
+
+interface BudgetGoal {
+  category: string
+  amount: number
+  spent: number
+}
+
+interface HistoryState {
+  expenses: Expense[]
+  budgetGoals: BudgetGoal[]
 }
 
 function App() {
-  // Initialize state with proper type checking and logging
   const [budget, setBudget] = useState(() => {
     const saved = localStorage.getItem('budget')
-    console.log('Loading budget:', saved)
     return saved || ''
   })
   
   const [isSetup, setIsSetup] = useState(() => {
-    const setupState = localStorage.getItem('isSetup') === 'true'
-    console.log('Loading isSetup:', setupState)
-    return setupState
+    return localStorage.getItem('isSetup') === 'true'
   })
   
   const [expenses, setExpenses] = useState<Expense[]>(() => {
     try {
       const saved = localStorage.getItem('expenses')
-      console.log('Loading expenses:', saved)
       const parsedExpenses = saved ? JSON.parse(saved) : []
       
-      // Validate the structure of loaded expenses
       if (!Array.isArray(parsedExpenses)) {
-        console.warn('Loaded expenses is not an array, resetting to empty array')
         return []
       }
       
-      // Ensure each expense has the correct structure
       const validExpenses = parsedExpenses.filter((expense: any) => {
         return (
           expense &&
           typeof expense.date === 'string' &&
           typeof expense.description === 'string' &&
           typeof expense.amount === 'number' &&
-          ['food', 'transportation', 'entertainment', 'utilities', 'other'].includes(expense.category)
+          ['food', 'transportation', 'entertainment', 'utilities', 'housing', 'healthcare', 'shopping', 'education', 'insurance', 'other'].includes(expense.category)
         )
       })
-
-      if (validExpenses.length !== parsedExpenses.length) {
-        console.warn('Some expenses were invalid and were filtered out')
-      }
 
       return validExpenses
     } catch (error) {
@@ -56,55 +63,222 @@ function App() {
     }
   })
 
-  // Persist state changes to localStorage with error handling
+  const [budgetGoals, setBudgetGoals] = useState<BudgetGoal[]>(() => {
+    try {
+      const saved = localStorage.getItem('budgetGoals')
+      return saved ? JSON.parse(saved) : []
+    } catch (error) {
+      console.error('Error loading budget goals:', error)
+      return []
+    }
+  })
+
+  const [showAddExpense, setShowAddExpense] = useState(false)
+  const [showAddGoal, setShowAddGoal] = useState(false)
+  const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'year'>('month')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showRecurringFrequency, setShowRecurringFrequency] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const expensesPerPage = 10
+  const [history, setHistory] = useState<HistoryState[]>([])
+  const [currentHistoryIndex, setCurrentHistoryIndex] = useState(-1)
+
+  // Memoize expensive calculations
+  const categoryTotals = useMemo(() => {
+    return expenses.reduce((acc, expense) => {
+      acc[expense.category] = (acc[expense.category] || 0) + expense.amount
+      return acc
+    }, {} as Record<string, number>)
+  }, [expenses])
+
+  const spendingOverview = useMemo(() => {
+    const total = expenses.reduce((sum, exp) => sum + exp.amount, 0)
+    return Object.entries(categoryTotals).map(([category, amount]) => ({
+      category,
+      amount,
+      percentage: total > 0 ? (amount / total) * 100 : 0
+    }))
+  }, [categoryTotals])
+
+  const timeframeExpenses = useMemo(() => {
+    const now = new Date()
+    const startDate = new Date()
+    
+    switch (selectedTimeframe) {
+      case 'week':
+        startDate.setDate(now.getDate() - 7)
+        break
+      case 'month':
+        startDate.setMonth(now.getMonth() - 1)
+        break
+      case 'year':
+        startDate.setFullYear(now.getFullYear() - 1)
+        break
+    }
+
+    return expenses.filter(expense => {
+      const expenseDate = new Date(expense.date)
+      return expenseDate >= startDate && expenseDate <= now
+    })
+  }, [expenses, selectedTimeframe])
+
+  const filteredExpenses = expenses.filter(expense => 
+    expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    expense.category.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  // Update pagination to use filtered expenses
+  const paginatedExpenses = useMemo(() => {
+    const startIndex = (currentPage - 1) * expensesPerPage
+    return filteredExpenses.slice(startIndex, startIndex + expensesPerPage)
+  }, [filteredExpenses, currentPage])
+
+  const totalPages = Math.ceil(filteredExpenses.length / expensesPerPage)
+
   useEffect(() => {
     try {
       localStorage.setItem('budget', budget)
       localStorage.setItem('isSetup', String(isSetup))
       localStorage.setItem('expenses', JSON.stringify(expenses))
-      console.log('Saved to localStorage:', { budget, isSetup, expensesCount: expenses.length })
+      localStorage.setItem('budgetGoals', JSON.stringify(budgetGoals))
     } catch (error) {
       console.error('Error saving to localStorage:', error)
+      alert('Failed to save data. Your browser might be in private mode or storage is full.')
     }
-  }, [budget, isSetup, expenses])
+  }, [budget, isSetup, expenses, budgetGoals])
 
-  // Calculate totals by category with error handling
-  const categoryTotals = expenses.reduce((acc, expense) => {
-    try {
-      acc[expense.category] = (acc[expense.category] || 0) + expense.amount
-    } catch (error) {
-      console.error('Error calculating category total for expense:', expense, error)
+  useEffect(() => {
+    const recurringCheckbox = document.getElementById('recurring') as HTMLInputElement
+    const recurringFrequencyDiv = document.querySelector('.recurring-frequency') as HTMLElement
+
+    if (recurringCheckbox && recurringFrequencyDiv) {
+      const handleCheckboxChange = (e: Event) => {
+        const checked = (e.target as HTMLInputElement).checked
+        setShowRecurringFrequency(checked)
+        recurringFrequencyDiv.style.display = checked ? 'block' : 'none'
+      }
+
+      recurringCheckbox.addEventListener('change', handleCheckboxChange)
+      return () => recurringCheckbox.removeEventListener('change', handleCheckboxChange)
     }
-    return acc
-  }, {} as Record<string, number>)
+  }, [showAddExpense])
 
   const handleSetBudget = (e: React.FormEvent) => {
     e.preventDefault()
     const budgetNum = Number(budget)
     if (budget && !isNaN(budgetNum) && budgetNum > 0) {
       setIsSetup(true)
-      console.log('Budget set:', budgetNum)
     } else {
       alert('Please enter a valid budget amount greater than 0')
     }
   }
 
-  const addExpense = (e: React.FormEvent) => {
+  const updateBudgetGoals = (expense: Expense) => {
+    setBudgetGoals(prev => prev.map(goal => {
+      if (goal.category === expense.category) {
+        return {
+          ...goal,
+          spent: goal.spent + expense.amount
+        }
+      }
+      return goal
+    }))
+  }
+
+  const addExpense = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    
+    try {
+      const form = e.target as HTMLFormElement
+      const date = (form.elements.namedItem('date') as HTMLInputElement).value
+      const description = (form.elements.namedItem('description') as HTMLInputElement).value
+      const amount = Number((form.elements.namedItem('amount') as HTMLInputElement).value)
+      const category = (form.elements.namedItem('category') as HTMLSelectElement).value as Expense['category']
+      const recurring = (form.elements.namedItem('recurring') as HTMLInputElement).checked
+      const recurringFrequency = (form.elements.namedItem('recurringFrequency') as HTMLSelectElement).value as Expense['recurringFrequency']
+
+      // Validate date
+      const selectedDate = new Date(date)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      if (selectedDate > today) {
+        throw new Error('Cannot add expenses for future dates')
+      }
+
+      if (!date || !description || amount <= 0 || !category) {
+        throw new Error('Please fill in all fields with valid values')
+      }
+
+      const newExpense = {
+        id: Date.now().toString(),
+        date,
+        description,
+        amount,
+        category,
+        recurring,
+        recurringFrequency: recurring ? recurringFrequency : undefined,
+        nextDueDate: recurring ? calculateNextDueDate(date, recurringFrequency) : undefined
+      }
+
+      setExpenses(prev => [...prev, newExpense])
+      updateBudgetGoals(newExpense)
+      form.reset()
+      setShowAddExpense(false)
+      setShowRecurringFrequency(false)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'An error occurred while adding the expense')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const calculateNextDueDate = (date: string, frequency: Expense['recurringFrequency']): string => {
+    const currentDate = new Date(date)
+    const nextDate = new Date(currentDate)
+    
+    switch (frequency) {
+      case 'daily':
+        nextDate.setDate(currentDate.getDate() + 1)
+        break
+      case 'weekly':
+        nextDate.setDate(currentDate.getDate() + 7)
+        break
+      case 'monthly':
+        nextDate.setMonth(currentDate.getMonth() + 1)
+        break
+      case 'yearly':
+        nextDate.setFullYear(currentDate.getFullYear() + 1)
+        break
+    }
+    
+    return nextDate.toISOString().split('T')[0]
+  }
+
+  const addBudgetGoal = (e: React.FormEvent) => {
     e.preventDefault()
     const form = e.target as HTMLFormElement
-    const date = (form.elements.namedItem('date') as HTMLInputElement).value
-    const description = (form.elements.namedItem('description') as HTMLInputElement).value
-    const amount = Number((form.elements.namedItem('amount') as HTMLInputElement).value)
-    const category = (form.elements.namedItem('category') as HTMLSelectElement).value as Expense['category']
+    const category = (form.elements.namedItem('goalCategory') as HTMLSelectElement).value
+    const amount = Number((form.elements.namedItem('goalAmount') as HTMLInputElement).value)
 
-    if (date && description && amount > 0 && category) {
-      const newExpense = { date, description, amount, category }
-      console.log('Adding expense:', newExpense)
-      setExpenses(prev => [...prev, newExpense])
+    if (category && amount > 0) {
+      const newGoal = {
+        category,
+        amount,
+        spent: 0
+      }
+      setBudgetGoals(prev => [...prev, newGoal])
       form.reset()
+      setShowAddGoal(false)
     } else {
       alert('Please fill in all fields with valid values')
     }
+  }
+
+  const deleteExpense = (id: string) => {
+    setExpenses(prev => prev.filter(expense => expense.id !== id))
   }
 
   const balance = Number(budget) - expenses.reduce((total, exp) => total + exp.amount, 0)
@@ -116,25 +290,84 @@ function App() {
     }).format(amount)
   }
 
-  const getSpendingOverview = () => {
-    const total = expenses.reduce((sum, exp) => sum + exp.amount, 0)
-    const overview = Object.entries(categoryTotals).map(([category, amount]) => ({
-      category,
-      amount,
-      percentage: total > 0 ? (amount / total) * 100 : 0
+  const getPieChartData = () => {
+    const data = spendingOverview.map(({ category, amount }) => ({
+      category: category.charAt(0).toUpperCase() + category.slice(1),
+      amount
     }))
-    console.log('Spending overview:', overview)
-    return overview
+
+    return {
+      labels: data.map(item => item.category),
+      datasets: [
+        {
+          data: data.map(item => item.amount),
+          backgroundColor: [
+            'rgba(248, 113, 113, 0.8)', // food
+            'rgba(96, 165, 250, 0.8)', // transportation
+            'rgba(52, 211, 153, 0.8)', // entertainment
+            'rgba(251, 191, 36, 0.8)', // utilities
+            'rgba(244, 114, 182, 0.8)', // housing
+            'rgba(167, 139, 250, 0.8)', // healthcare
+            'rgba(45, 212, 191, 0.8)', // shopping
+            'rgba(248, 113, 113, 0.8)', // education
+            'rgba(96, 165, 250, 0.8)', // insurance
+            'rgba(148, 163, 184, 0.8)', // other
+          ],
+          borderColor: [
+            'rgba(248, 113, 113, 1)',
+            'rgba(96, 165, 250, 1)',
+            'rgba(52, 211, 153, 1)',
+            'rgba(251, 191, 36, 1)',
+            'rgba(244, 114, 182, 1)',
+            'rgba(167, 139, 250, 1)',
+            'rgba(45, 212, 191, 1)',
+            'rgba(248, 113, 113, 1)',
+            'rgba(96, 165, 250, 1)',
+            'rgba(148, 163, 184, 1)',
+          ],
+          borderWidth: 1,
+        },
+      ],
+    }
   }
 
-  // Clear all data function (for debugging)
-  const clearAllData = () => {
-    if (window.confirm('Are you sure you want to reset all data?')) {
-      localStorage.clear()
-      setBudget('')
-      setIsSetup(false)
-      setExpenses([])
-      console.log('All data cleared')
+  const pieChartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'right' as const,
+        labels: {
+          padding: 20,
+          usePointStyle: true,
+          pointStyle: 'circle',
+        },
+      },
+      tooltip: {
+        callbacks: {
+          label: (context: any) => {
+            const label = context.label || ''
+            const value = context.raw || 0
+            const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0)
+            const percentage = ((value / total) * 100).toFixed(1)
+            return `${label}: ${formatCurrency(value)} (${percentage}%)`
+          },
+        },
+      },
+    },
+  }
+
+  const getBudgetGoalProgress = (category: string) => {
+    const goal = budgetGoals.find(g => g.category === category)
+    if (!goal) return null
+    
+    const spent = expenses
+      .filter(e => e.category === category)
+      .reduce((sum, e) => sum + e.amount, 0)
+    
+    return {
+      goal,
+      spent,
+      percentage: (spent / goal.amount) * 100
     }
   }
 
@@ -167,140 +400,361 @@ function App() {
     )
   }
 
-  const spendingOverview = getSpendingOverview()
-
   return (
     <div className="app">
       <div className="container">
-        <h1>Personal Finance Tracker</h1>
-        
-        <div className="balance-card">
-          <div className="budget-info">Current Balance</div>
-          <div className={`balance ${balance >= 0 ? 'positive' : 'negative'}`}>
-            {formatCurrency(balance)}
+        <header className="app-header">
+          <div className="header-left">
+            <h1>Personal Finance Tracker</h1>
+            <nav className="main-nav">
+              <button className={`nav-button ${!showAddExpense && !showAddGoal ? 'active' : ''}`}>
+                <span className="material-icons">dashboard</span>
+                Dashboard
+              </button>
+              <button className="nav-button" onClick={() => setShowAddExpense(true)}>
+                <span className="material-icons">add_circle</span>
+                Add Expense
+              </button>
+              <button className="nav-button" onClick={() => setShowAddGoal(true)}>
+                <span className="material-icons">flag</span>
+                Set Goals
+              </button>
+            </nav>
           </div>
-          <div className="budget-info">
-            Budget: {formatCurrency(Number(budget))}
-          </div>
-        </div>
-
-        {spendingOverview.length > 0 ? (
-          <div className="spending-overview">
-            <h2>Spending by Category</h2>
-            <div className="category-bars">
-              {spendingOverview.map(({ category, amount, percentage }) => (
-                <div key={category} className="category-bar-container">
-                  <div className="category-label">
-                    <span>{category.charAt(0).toUpperCase() + category.slice(1)}</span>
-                    <span>{formatCurrency(amount)}</span>
-                  </div>
-                  <div className="progress-bar">
-                    <div 
-                      className={`progress-fill ${category}`}
-                      style={{ width: `${percentage}%` }}
-                    />
-                  </div>
-                  <span className="percentage">{percentage.toFixed(1)}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        <div className="form-container">
-          <h2>Add New Expense</h2>
-          <form onSubmit={addExpense}>
-            <div className="form-group">
-              <label htmlFor="date">Date</label>
-              <input
-                type="date"
-                id="date"
-                name="date"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="description">Description</label>
+          <div className="header-right">
+            <div className="search-bar">
               <input
                 type="text"
-                id="description"
-                name="description"
-                placeholder="Enter expense description"
-                required
+                placeholder="Search expenses..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
+              <span className="material-icons">search</span>
             </div>
-            <div className="form-group">
-              <label htmlFor="category">Category</label>
-              <select
-                id="category"
-                name="category"
-                required
-                className="category-select"
-              >
-                <option value="">Select a category</option>
-                <option value="food">Food & Dining</option>
-                <option value="transportation">Transportation</option>
-                <option value="entertainment">Entertainment</option>
-                <option value="utilities">Utilities</option>
-                <option value="other">Other</option>
-              </select>
+          </div>
+        </header>
+        
+        <div className="dashboard-grid">
+          <div className="balance-card">
+            <div className="budget-info">Current Balance</div>
+            <div className={`balance ${balance >= 0 ? 'positive' : 'negative'}`}>
+              {formatCurrency(balance)}
             </div>
-            <div className="form-group">
-              <label htmlFor="amount">Amount</label>
-              <input
-                type="number"
-                id="amount"
-                name="amount"
-                placeholder="Enter amount"
-                step="0.01"
-                min="0"
-                required
-              />
+            <div className="budget-info">
+              Budget: {formatCurrency(Number(budget))}
             </div>
-            <button type="submit">Add Expense</button>
-          </form>
-        </div>
+          </div>
 
-        <div className="expenses-list">
-          <h2>Recent Expenses</h2>
-          {expenses.length === 0 ? (
-            <p>No expenses yet. Add your first expense above!</p>
-          ) : (
+          <div className="timeframe-selector">
+            <button 
+              className={`timeframe-button ${selectedTimeframe === 'week' ? 'active' : ''}`}
+              onClick={() => setSelectedTimeframe('week')}
+            >
+              Week
+            </button>
+            <button 
+              className={`timeframe-button ${selectedTimeframe === 'month' ? 'active' : ''}`}
+              onClick={() => setSelectedTimeframe('month')}
+            >
+              Month
+            </button>
+            <button 
+              className={`timeframe-button ${selectedTimeframe === 'year' ? 'active' : ''}`}
+              onClick={() => setSelectedTimeframe('year')}
+            >
+              Year
+            </button>
+          </div>
+
+          {expenses.length === 0 && (
+            <div className="welcome-message">
+              <h2>Welcome to Your Personal Finance Tracker!</h2>
+              <p>Get started by adding your first expense or setting up a budget goal.</p>
+              <div className="quick-actions">
+                <button onClick={() => setShowAddExpense(true)}>
+                  <span className="material-icons">add_circle</span>
+                  Add Your First Expense
+                </button>
+                <button onClick={() => setShowAddGoal(true)}>
+                  <span className="material-icons">flag</span>
+                  Set Up Budget Goals
+                </button>
+              </div>
+            </div>
+          )}
+
+          {spendingOverview.length > 0 && (
             <>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Description</th>
-                    <th>Category</th>
-                    <th>Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {expenses.map((expense, index) => (
-                    <tr key={index}>
-                      <td>{new Date(expense.date).toLocaleDateString()}</td>
-                      <td>{expense.description}</td>
-                      <td>
-                        <span className={`category-tag ${expense.category}`}>
-                          {expense.category.charAt(0).toUpperCase() + expense.category.slice(1)}
-                        </span>
-                      </td>
-                      <td>{formatCurrency(expense.amount)}</td>
-                    </tr>
+              <div className="spending-overview">
+                <h2>Spending by Category</h2>
+                <div className="category-bars">
+                  {spendingOverview.map(({ category, amount, percentage }) => (
+                    <div key={category} className="category-bar-container">
+                      <div className="category-label">
+                        <span>{category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                        <span>{formatCurrency(amount)}</span>
+                      </div>
+                      <div className="progress-bar">
+                        <div 
+                          className={`progress-fill ${category}`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="percentage">{percentage.toFixed(1)}%</span>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-              <button 
-                className="export-button" 
-                onClick={clearAllData}
-                style={{ marginTop: '1rem' }}
-              >
-                Reset All Data
-              </button>
+                </div>
+              </div>
+
+              <div className="pie-chart-container">
+                <h2>Spending Distribution</h2>
+                <div className="pie-chart">
+                  <Pie data={getPieChartData()} options={pieChartOptions} />
+                </div>
+              </div>
             </>
           )}
+
+          {budgetGoals.length > 0 && (
+            <div className="budget-goals">
+              <h2>Budget Goals</h2>
+              <div className="goals-grid">
+                {budgetGoals.map(goal => {
+                  const progress = getBudgetGoalProgress(goal.category)
+                  if (!progress) return null
+                  
+                  return (
+                    <div key={goal.category} className="goal-card">
+                      <div className="goal-header">
+                        <span className={`category-tag ${goal.category}`}>
+                          {goal.category.charAt(0).toUpperCase() + goal.category.slice(1)}
+                        </span>
+                        <span className="goal-amount">
+                          {formatCurrency(progress.spent)} / {formatCurrency(goal.amount)}
+                        </span>
+                      </div>
+                      <div className="progress-bar">
+                        <div 
+                          className={`progress-fill ${goal.category} ${progress.percentage > 100 ? 'over-budget' : ''}`}
+                          style={{ width: `${Math.min(progress.percentage, 100)}%` }}
+                        />
+                      </div>
+                      <div className="goal-footer">
+                        <span className="percentage">
+                          {progress.percentage.toFixed(1)}%
+                        </span>
+                        {progress.percentage > 100 && (
+                          <span className="over-budget-warning">
+                            Over budget by {formatCurrency(progress.spent - goal.amount)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="expenses-list">
+            <h2>Recent Expenses</h2>
+            {filteredExpenses.length > 0 ? (
+              <>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Description</th>
+                      <th>Category</th>
+                      <th>Amount</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedExpenses.map(expense => (
+                      <tr key={expense.id}>
+                        <td>{new Date(expense.date).toLocaleDateString()}</td>
+                        <td>{expense.description}</td>
+                        <td>
+                          <span className={`category-tag ${expense.category}`}>
+                            {expense.category}
+                          </span>
+                        </td>
+                        <td>{formatCurrency(expense.amount)}</td>
+                        <td>
+                          <button 
+                            className="icon-button delete"
+                            onClick={() => deleteExpense(expense.id)}
+                          >
+                            <span className="material-icons">delete</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {totalPages > 1 && (
+                  <div className="pagination">
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </button>
+                    <span>Page {currentPage} of {totalPages}</span>
+                    <button 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <p>No expenses found</p>
+            )}
+          </div>
         </div>
+
+        {showAddExpense && (
+          <div className="modal">
+            <div className="modal-content">
+              <h2>Add New Expense</h2>
+              <form onSubmit={addExpense}>
+                <div className="form-group">
+                  <label htmlFor="date">Date</label>
+                  <input
+                    type="date"
+                    id="date"
+                    name="date"
+                    max={new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="description">Description</label>
+                  <input
+                    type="text"
+                    id="description"
+                    name="description"
+                    placeholder="Enter expense description"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="category">Category</label>
+                  <select
+                    id="category"
+                    name="category"
+                    required
+                    className="category-select"
+                  >
+                    <option value="">Select a category</option>
+                    <option value="food">Food & Dining</option>
+                    <option value="transportation">Transportation</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="utilities">Utilities</option>
+                    <option value="housing">Housing</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="shopping">Shopping</option>
+                    <option value="education">Education</option>
+                    <option value="insurance">Insurance</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="amount">Amount</label>
+                  <input
+                    type="number"
+                    id="amount"
+                    name="amount"
+                    placeholder="Enter amount"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <div className="form-group checkbox">
+                  <label>
+                    <input
+                      type="checkbox"
+                      name="recurring"
+                      id="recurring"
+                    />
+                    Recurring Expense
+                  </label>
+                </div>
+                <div className="form-group recurring-frequency" style={{ display: 'none' }}>
+                  <label htmlFor="recurringFrequency">Frequency</label>
+                  <select
+                    id="recurringFrequency"
+                    name="recurringFrequency"
+                    className="category-select"
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
+                </div>
+                <div className="modal-actions">
+                  <button type="button" onClick={() => setShowAddExpense(false)}>Cancel</button>
+                  <button type="submit" disabled={isLoading}>
+                    {isLoading ? 'Adding...' : 'Add Expense'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {showAddGoal && (
+          <div className="modal">
+            <div className="modal-content">
+              <h2>Add Budget Goal</h2>
+              <form onSubmit={addBudgetGoal}>
+                <div className="form-group">
+                  <label htmlFor="goalCategory">Category</label>
+                  <select
+                    id="goalCategory"
+                    name="goalCategory"
+                    required
+                    className="category-select"
+                  >
+                    <option value="">Select a category</option>
+                    <option value="food">Food & Dining</option>
+                    <option value="transportation">Transportation</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="utilities">Utilities</option>
+                    <option value="housing">Housing</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="shopping">Shopping</option>
+                    <option value="education">Education</option>
+                    <option value="insurance">Insurance</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="goalAmount">Target Amount</label>
+                  <input
+                    type="number"
+                    id="goalAmount"
+                    name="goalAmount"
+                    placeholder="Enter target amount"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <div className="modal-actions">
+                  <button type="button" onClick={() => setShowAddGoal(false)}>Cancel</button>
+                  <button type="submit">Add Goal</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
