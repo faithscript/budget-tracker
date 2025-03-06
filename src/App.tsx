@@ -70,6 +70,8 @@ function App() {
 
   const [showAddExpense, setShowAddExpense] = useState(false)
   const [showAddGoal, setShowAddGoal] = useState(false)
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null)
+  const [showExpenseForm, setShowExpenseForm] = useState(false)
   const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'year'>('month')
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(false)
