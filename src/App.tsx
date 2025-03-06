@@ -384,6 +384,23 @@ function App() {
               />
               <span className="material-icons">search</span>
             </div>
+            <button 
+              className="nav-button update-budget"
+              onClick={() => {
+                const newBudget = prompt('Enter new budget amount:', budget)
+                if (newBudget !== null) {
+                  const budgetNum = Number(newBudget)
+                  if (!isNaN(budgetNum) && budgetNum > 0) {
+                    setBudget(newBudget)
+                  } else {
+                    alert('Please enter a valid budget amount greater than 0')
+                  }
+                }
+              }}
+            >
+              <span className="material-icons">edit</span>
+              Update Budget
+            </button>
           </div>
         </header>
         
