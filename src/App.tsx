@@ -626,6 +626,25 @@ function App() {
                     </div>
                   ))}
                 </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="pagination">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </button>
+                    <span>Page {currentPage} of {totalPages}</span>
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -764,6 +783,94 @@ function App() {
                 <div className="modal-actions">
                   <button type="button" onClick={() => setShowAddGoal(false)}>Cancel</button>
                   <button type="submit">Add Goal</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Expense Modal */}
+        {showExpenseForm && editingExpense && (
+          <div className="modal">
+            <div className="modal-content">
+              <h2>Edit Expense</h2>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                const form = e.target as HTMLFormElement;
+                const updatedExpense = {
+                  ...editingExpense,
+                  date: (form.elements.namedItem('date') as HTMLInputElement).value,
+                  description: (form.elements.namedItem('description') as HTMLInputElement).value,
+                  amount: Number((form.elements.namedItem('amount') as HTMLInputElement).value),
+                  category: (form.elements.namedItem('category') as HTMLSelectElement).value as Expense['category'],
+                  recurring: (form.elements.namedItem('recurring') as HTMLInputElement).checked,
+                  recurringFrequency: (form.elements.namedItem('recurringFrequency') as HTMLSelectElement).value as Expense['recurringFrequency']
+                };
+                setExpenses(prev => prev.map(exp => 
+                  exp.id === editingExpense.id ? updatedExpense : exp
+                ));
+                setShowExpenseForm(false);
+                setEditingExpense(null);
+              }}>
+                <div className="form-group">
+                  <label htmlFor="date">Date</label>
+                  <input
+                    type="date"
+                    id="date"
+                    name="date"
+                    defaultValue={editingExpense.date}
+                    max={new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="description">Description</label>
+                  <input
+                    type="text"
+                    id="description"
+                    name="description"
+                    defaultValue={editingExpense.description}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="category">Category</label>
+                  <select
+                    id="category"
+                    name="category"
+                    defaultValue={editingExpense.category}
+                    required
+                  >
+                    <option value="food">Food & Dining</option>
+                    <option value="transportation">Transportation</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="utilities">Utilities</option>
+                    <option value="housing">Housing</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="shopping">Shopping</option>
+                    <option value="education">Education</option>
+                    <option value="insurance">Insurance</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="amount">Amount</label>
+                  <input
+                    type="number"
+                    id="amount"
+                    name="amount"
+                    defaultValue={editingExpense.amount}
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <div className="modal-actions">
+                  <button type="button" onClick={() => {
+                    setShowExpenseForm(false);
+                    setEditingExpense(null);
+                  }}>Cancel</button>
+                  <button type="submit">Save Changes</button>
                 </div>
               </form>
             </div>
