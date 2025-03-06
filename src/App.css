@@ -1239,4 +1239,75 @@ button:disabled:hover {
   }
 }
 
+/* Mobile Expense Cards */
+.mobile-cards {
+  display: none;
+}
+
+.expense-card {
+  background: var(--white);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+
+.expense-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.expense-date {
+  color: var(--text-light);
+  font-size: 0.875rem;
+}
+
+.expense-card-body {
+  margin-bottom: 0.75rem;
+}
+
+.expense-description {
+  color: var(--text);
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.expense-amount {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+
+.expense-card-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+/* Responsive Layout */
+@media (max-width: 768px) {
+  .desktop-table {
+    display: none;
+  }
+
+  .mobile-cards {
+    display: block;
+  }
+
+  .expenses-list {
+    padding: 1rem;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-cards {
+    display: none;
+  }
+}
+
 

@@ -237,10 +237,7 @@ function App() {
   const balance = Number(budget) - expenses.reduce((total, exp) => total + exp.amount, 0)
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
+    return `$${amount.toFixed(2)}`
   }
 
   const getPieChartData = () => {
@@ -323,6 +320,21 @@ function App() {
       percentage: (spent / goal.amount) * 100
     }
   }
+
+  const handleEditExpense = (expense: Expense) => {
+    setEditingExpense(expense);
+    setShowExpenseForm(true);
+  };
+
+  const handleDeleteExpense = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this expense?')) {
+      deleteExpense(id);
+    }
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString();
+  };
 
   if (!isSetup) {
     return (
@@ -528,61 +540,91 @@ function App() {
 
           <div className="expenses-list">
             <h2>Recent Expenses</h2>
-            {filteredExpenses.length > 0 ? (
-              <>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Description</th>
-                      <th>Category</th>
-                      <th>Amount</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedExpenses.map(expense => (
-                      <tr key={expense.id}>
-                        <td>{new Date(expense.date).toLocaleDateString()}</td>
-                        <td>{expense.description}</td>
-                        <td>
-                          <span className={`category-tag ${expense.category}`}>
-                            {expense.category}
-                          </span>
-                        </td>
-                        <td>{formatCurrency(expense.amount)}</td>
-                        <td>
-                          <button 
-                            className="icon-button delete"
-                            onClick={() => deleteExpense(expense.id)}
-                          >
-                            <span className="material-icons">delete</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {totalPages > 1 && (
-                  <div className="pagination">
-                    <button 
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </button>
-                    <span>Page {currentPage} of {totalPages}</span>
-                    <button 
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
-              </>
+            {expenses.length === 0 ? (
+              <p>No expenses yet. Add your first expense to get started!</p>
             ) : (
-              <p>No expenses found</p>
+              <>
+                {/* Desktop Table View */}
+                <div className="desktop-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Amount</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedExpenses.map((expense) => (
+                        <tr key={expense.id}>
+                          <td>{formatDate(expense.date)}</td>
+                          <td>{expense.description}</td>
+                          <td>
+                            <span className={`category-tag ${expense.category.toLowerCase()}`}>
+                              {expense.category}
+                            </span>
+                          </td>
+                          <td>${expense.amount.toFixed(2)}</td>
+                          <td>
+                            <div className="header-actions">
+                              <button
+                                className="icon-button"
+                                onClick={() => handleEditExpense(expense)}
+                                title="Edit"
+                              >
+                                <span className="material-icons">edit</span>
+                              </button>
+                              <button
+                                className="icon-button delete"
+                                onClick={() => handleDeleteExpense(expense.id)}
+                                title="Delete"
+                              >
+                                <span className="material-icons">delete</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="mobile-cards">
+                  {paginatedExpenses.map((expense) => (
+                    <div key={expense.id} className="expense-card">
+                      <div className="expense-card-header">
+                        <span className="expense-date">{formatDate(expense.date)}</span>
+                        <span className={`category-tag ${expense.category.toLowerCase()}`}>
+                          {expense.category}
+                        </span>
+                      </div>
+                      <div className="expense-card-body">
+                        <p className="expense-description">{expense.description}</p>
+                        <p className="expense-amount">${expense.amount.toFixed(2)}</p>
+                      </div>
+                      <div className="expense-card-footer">
+                        <button
+                          className="icon-button"
+                          onClick={() => handleEditExpense(expense)}
+                          title="Edit"
+                        >
+                          <span className="material-icons">edit</span>
+                        </button>
+                        <button
+                          className="icon-button delete"
+                          onClick={() => handleDeleteExpense(expense.id)}
+                          title="Delete"
+                        >
+                          <span className="material-icons">delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>
