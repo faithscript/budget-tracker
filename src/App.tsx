@@ -77,12 +77,9 @@ function App() {
   const [showAddGoal, setShowAddGoal] = useState(false)
   const [selectedTimeframe, setSelectedTimeframe] = useState<'week' | 'month' | 'year'>('month')
   const [searchTerm, setSearchTerm] = useState('')
-  const [showRecurringFrequency, setShowRecurringFrequency] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const expensesPerPage = 10
-  const [history, setHistory] = useState<HistoryState[]>([])
-  const [currentHistoryIndex, setCurrentHistoryIndex] = useState(-1)
 
   // Memoize expensive calculations
   const categoryTotals = useMemo(() => {
@@ -100,28 +97,6 @@ function App() {
       percentage: total > 0 ? (amount / total) * 100 : 0
     }))
   }, [categoryTotals])
-
-  const timeframeExpenses = useMemo(() => {
-    const now = new Date()
-    const startDate = new Date()
-    
-    switch (selectedTimeframe) {
-      case 'week':
-        startDate.setDate(now.getDate() - 7)
-        break
-      case 'month':
-        startDate.setMonth(now.getMonth() - 1)
-        break
-      case 'year':
-        startDate.setFullYear(now.getFullYear() - 1)
-        break
-    }
-
-    return expenses.filter(expense => {
-      const expenseDate = new Date(expense.date)
-      return expenseDate >= startDate && expenseDate <= now
-    })
-  }, [expenses, selectedTimeframe])
 
   const filteredExpenses = expenses.filter(expense => 
     expense.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -147,22 +122,6 @@ function App() {
       alert('Failed to save data. Your browser might be in private mode or storage is full.')
     }
   }, [budget, isSetup, expenses, budgetGoals])
-
-  useEffect(() => {
-    const recurringCheckbox = document.getElementById('recurring') as HTMLInputElement
-    const recurringFrequencyDiv = document.querySelector('.recurring-frequency') as HTMLElement
-
-    if (recurringCheckbox && recurringFrequencyDiv) {
-      const handleCheckboxChange = (e: Event) => {
-        const checked = (e.target as HTMLInputElement).checked
-        setShowRecurringFrequency(checked)
-        recurringFrequencyDiv.style.display = checked ? 'block' : 'none'
-      }
-
-      recurringCheckbox.addEventListener('change', handleCheckboxChange)
-      return () => recurringCheckbox.removeEventListener('change', handleCheckboxChange)
-    }
-  }, [showAddExpense])
 
   const handleSetBudget = (e: React.FormEvent) => {
     e.preventDefault()
@@ -227,7 +186,6 @@ function App() {
       updateBudgetGoals(newExpense)
       form.reset()
       setShowAddExpense(false)
-      setShowRecurringFrequency(false)
     } catch (error) {
       alert(error instanceof Error ? error.message : 'An error occurred while adding the expense')
     } finally {
