@@ -1199,4 +1199,44 @@ button:disabled:hover {
   font-size: 1.25rem;
 }
 
+.expenses-statistics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.expenses-chart {
+  background: white;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.expenses-chart h3 {
+  margin-bottom: 1rem;
+  color: #1f2937;
+  font-size: 1.25rem;
+}
+
+.expenses-chart canvas {
+  width: 100% !important;
+  height: 300px !important;
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .expenses-statistics {
+    grid-template-columns: 1fr;
+  }
+
+  .expenses-chart {
+    padding: 1rem;
+  }
+
+  .expenses-chart canvas {
+    height: 250px !important;
+  }
+}
+
 
