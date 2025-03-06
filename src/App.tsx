@@ -22,11 +22,6 @@ interface BudgetGoal {
   spent: number
 }
 
-interface HistoryState {
-  expenses: Expense[]
-  budgetGoals: BudgetGoal[]
-}
-
 function App() {
   const [budget, setBudget] = useState(() => {
     const saved = localStorage.getItem('budget')
