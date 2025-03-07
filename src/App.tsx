@@ -796,21 +796,33 @@ function App() {
               <h2>Edit Expense</h2>
               <form onSubmit={(e) => {
                 e.preventDefault();
-                const form = e.target as HTMLFormElement;
-                const updatedExpense = {
-                  ...editingExpense,
-                  date: (form.elements.namedItem('date') as HTMLInputElement).value,
-                  description: (form.elements.namedItem('description') as HTMLInputElement).value,
-                  amount: Number((form.elements.namedItem('amount') as HTMLInputElement).value),
-                  category: (form.elements.namedItem('category') as HTMLSelectElement).value as Expense['category'],
-                  recurring: (form.elements.namedItem('recurring') as HTMLInputElement).checked,
-                  recurringFrequency: (form.elements.namedItem('recurringFrequency') as HTMLSelectElement).value as Expense['recurringFrequency']
-                };
-                setExpenses(prev => prev.map(exp => 
-                  exp.id === editingExpense.id ? updatedExpense : exp
-                ));
-                setShowExpenseForm(false);
-                setEditingExpense(null);
+                try {
+                  const form = e.target as HTMLFormElement;
+                  const date = (form.elements.namedItem('date') as HTMLInputElement).value;
+                  const description = (form.elements.namedItem('description') as HTMLInputElement).value;
+                  const amount = Number((form.elements.namedItem('amount') as HTMLInputElement).value);
+                  const category = (form.elements.namedItem('category') as HTMLSelectElement).value as Expense['category'];
+                  
+                  if (!date || !description || amount <= 0 || !category) {
+                    throw new Error('Please fill in all fields with valid values');
+                  }
+
+                  const updatedExpense: Expense = {
+                    ...editingExpense,
+                    date,
+                    description,
+                    amount,
+                    category
+                  };
+
+                  setExpenses(prev => prev.map(exp => 
+                    exp.id === editingExpense.id ? updatedExpense : exp
+                  ));
+                  setShowExpenseForm(false);
+                  setEditingExpense(null);
+                } catch (error) {
+                  alert(error instanceof Error ? error.message : 'An error occurred while updating the expense');
+                }
               }}>
                 <div className="form-group">
                   <label htmlFor="date">Date</label>
